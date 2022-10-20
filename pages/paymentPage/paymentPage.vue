@@ -39,7 +39,7 @@
 			return {
 				title: "缴费页面", // 页面标题
 				shouye: "no", // 是否是首页，不是首页显示返回上一层箭头
-
+				authCode:'',
 				orderNo: "",
 				second: 10,
 				isSuccess: true,
@@ -54,39 +54,52 @@
 			},
 
 			getOrderDetail() {
-				this.isShowResult = true;
-				this.isSuccess = true;
+				this.isShowResult = false;
+				this.isSuccess = false;
 				clearInterval(this.time);
-				
+				const params = {
+						  orderNo: this.orderNo
+						}
 				this.$myRequest({
-					url: "/wechat/user/dfltPtCard/info",
+					url: "/hospt/getWechatOrderList",
+					data: params,
 				}).then(res => {
 					if (res.data.length === 0) {
-						this.isShowResult = true;
+						this.isShowResult = false;
 						this.isSuccess = false
 						clearInterval(this.time);
-					  } else {
+					} else {
 						const paymentstatusId = res.data[0].paymentstatusId
 						if (paymentstatusId == 3010) {
-						  this.isShowResult = true;
-						  this.isSuccess = true
-						  clearInterval(this.time);
-						  setTimeout(() => {
-							url: '/pages/register-success/register-success?type=门诊&&'+JSON.stringify(res.data[0])
-						  }, 1000)
+							this.isShowResult = true;
+							this.isSuccess = true
+							clearInterval(this.time);
+							console.log(this.authCode,"判断缴费")
+							if(this.authCode){
+								setTimeout(() => {
+									uni.navigateTo({url: '/pages/register-success/register-success?type=门诊' + '&orderDetail='+JSON.stringify(
+										res.data[0])+'&authCode='+'1'})
+								}, 1000)
+								return
+							}
+							setTimeout(() => {
+								uni.navigateTo({url: '/pages/register-success/register-success?type=门诊' + '&orderDetail='+JSON.stringify(
+									res.data[0])})
+							}, 1000)
+							
 						} else if (paymentstatusId == 3011 && !this.isTime) {
-						  this.isShowResult = true;
-						  this.isSuccess = false
+							this.isShowResult = true;
+							this.isSuccess = false
 						} else if (paymentstatusId == 3011) {
-						  setTimeout(() => {
-							this.getOrderDetail();
-						  }, 1000)
+							setTimeout(() => {
+								this.getOrderDetail();
+							}, 1000)
 						} else if (paymentstatusId == 3014) {
-						  this.isShowResult = true;
-						  this.isSuccess = false
-						  clearInterval(this.time);
+							this.isShowResult = true;
+							this.isSuccess = false
+							clearInterval(this.time);
 						}
-					  }
+					}
 				}).catch(err => {
 					this.loading = false;
 				})
@@ -95,9 +108,11 @@
 		},
 		onLoad(e) {
 			this.orderNo = e.orderNo;
+			this.authCode = e.authCode;
 			console.log(this.orderNo);
 		},
 		mounted() {
+			this.getOrderDetail()
 			this.time = setInterval(() => {
 				this.second--;
 				if (this.second === 0) {
